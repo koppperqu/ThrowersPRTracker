@@ -198,6 +198,11 @@ mostRecentMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_paren
 ###ADD FUNCTIONALITY TO PRINT THE 10 MOST RECENT MEETS THEN CHOOSE ONE 0-9 TO GET THE RESULTS FOR
 ###
 
+menEventURLS,womenEventURLS=getMenAndWomenEventURLS('https://www.tfrrs.org'+mostRecentMeets[0]['href'])
+email=checkForPRS(menEventURLS)
+email+=checkForPRS(womenEventURLS)
+
+
 print("Welcome to sauce's thrower pr tracker :)")
 print("What would you like to do?")
 print("1) Run the check for prs and 'print' the results to the console")
