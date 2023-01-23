@@ -29,54 +29,61 @@ def getThrowersInDBCurrPRS():
         throwers.append(each[0])
     for eachThrower in throwers:
         #Go to their tffrs page and get all their current prs then update the db
-        html = urlopen(tffrsLinks[names.index(eachThrower)])
-        soup=BeautifulSoup(html.read(), "html.parser")
-        bestsRows=soup.find('table',id='all_bests').findAll('td')
-        events=[]
-        marks=[]
-        for index,each in enumerate(bestsRows):
-            if index%2==0:
-                events.append(each)
-            else:
-                marks.append(each)
-        #cur.execute("select * from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = 'Austin Kopp'").fetchall()
-        for eventIndex,eachEvent in enumerate(events):
-            formatEvent=eachEvent.getText().strip()
-            if formatEvent in ['SP','WT','DT','HT','JT']:
-                formatMark=marks[eventIndex].getText().strip()    
-                holdCharacters=[]
-                tempmark=''
-                #Need to go through mark and find m then only use what before m for the mark.
-                for eachLetter in formatMark:
-                    if eachLetter=='m':
-                        break
-                    holdCharacters.append(eachLetter)
-                for each in holdCharacters:
-                    tempmark=tempmark+each
-                formatMark=tempmark
-                event=''
-                if(formatEvent=='SP'):
-                    event='Shot Put'
-                elif(formatEvent == 'WT'):
-                    event='Weight Throw'
-                elif(formatEvent == 'DT'):
-                    event='Discus'
-                elif(formatEvent == 'HT'):
-                    event='Hammer'
-                elif(formatEvent == 'JT'):
-                    event='Javelin'
-                #ADD TO DB OR UPDATE DB NOW
-                res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event))
-                count = res.fetchone()[0]
-                if(count==1):
-                    prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event)).fetchone()[0]
-                    cur.execute("update prs set mark = ? where id = ?",(formatMark,prID,))
-                    con.commit()
+        if(eachThrower in names):
+            html = urlopen(tffrsLinks[names.index(eachThrower)])
+            soup=BeautifulSoup(html.read(), "html.parser")
+            bestsRows=soup.find('table',id='all_bests').findAll('td')
+            events=[]
+            marks=[]
+            for index,each in enumerate(bestsRows):
+                if index%2==0:
+                    events.append(each)
                 else:
-                    athleteID = cur.execute("select id from athletes where name = ?",(eachThrower,)).fetchone()[0]
-                    eventID = cur.execute("select id from events where name = ?",(event,)).fetchone()[0]
-                    cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,formatMark,))
-                    con.commit()
+                    marks.append(each)
+            #cur.execute("select * from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = 'Austin Kopp'").fetchall()
+            for eventIndex,eachEvent in enumerate(events):
+                formatEvent=eachEvent.getText().strip()
+                if formatEvent in ['SP','WT','DT','HT','JT']:
+                    formatMark=marks[eventIndex].getText().strip()    
+                    holdCharacters=[]
+                    tempmark=''
+                    #Need to go through mark and find m then only use what before m for the mark.
+                    for eachLetter in formatMark:
+                        if eachLetter=='m':
+                            break
+                        holdCharacters.append(eachLetter)
+                    for each in holdCharacters:
+                        tempmark=tempmark+each
+                    formatMark=tempmark
+                    event=''
+                    if(formatEvent=='SP'):
+                        event='Shot Put'
+                    elif(formatEvent == 'WT'):
+                        event='Weight Throw'
+                    elif(formatEvent == 'DT'):
+                        event='Discus'
+                    elif(formatEvent == 'HT'):
+                        event='Hammer'
+                    elif(formatEvent == 'JT'):
+                        event='Javelin'
+                    #ADD TO DB OR UPDATE DB NOW
+                    res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event))
+                    count = res.fetchone()[0]
+                    if(count==1):
+                        currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event)).fetchone()[0]
+                        if(currPR<float(formatMark)):
+                            print('Updating ' + eachThrower + ' event ' + event + ' new mark ' + formatMark)
+                            prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event)).fetchone()[0]
+                            cur.execute("update prs set mark = ? where id = ?",(formatMark,prID,))
+                            con.commit()
+                    else:
+                        print('Adding pr for ' + eachThrower + ' event ' + event + ' new mark ' + formatMark)
+                        athleteID = cur.execute("select id from athletes where name = ?",(eachThrower,)).fetchone()[0]
+                        eventID = cur.execute("select id from events where name = ?",(event,)).fetchone()[0]
+                        cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,formatMark,))
+                        con.commit()
+        else:
+            print ('Old thrower ' + eachThrower + ' not on the roster :(')
 
 def findEventURLS(listOfEventLinks):
     events=["Shot Put","Weight Throw","Discus","Hammer","Javelin"]
@@ -163,11 +170,11 @@ def checkForPRS(eventURLS):
     email+=instagram
     return(email)
 
-def user_input_is_valid(input):
+def user_input_is_valid(input,lowVal,highVal):
     try:
         # Convert it into integer
         val = int(input)
-        if(val>0 and val<5):
+        if(val>=lowVal and val<=highVal):
             return (True)        
         print("Please input an acceptable choice")
         return (False)
@@ -175,7 +182,7 @@ def user_input_is_valid(input):
         print("Please input an acceptable choice")
         return (False)
 
-emailOn=False
+
 con = sqlite3.connect("throwersprs.db")
 cur = con.cursor()
 #Add the tables if they do not exists
@@ -198,28 +205,62 @@ mostRecentMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_paren
 ###ADD FUNCTIONALITY TO PRINT THE 10 MOST RECENT MEETS THEN CHOOSE ONE 0-9 TO GET THE RESULTS FOR
 ###
 
-menEventURLS,womenEventURLS=getMenAndWomenEventURLS('https://www.tfrrs.org'+mostRecentMeets[0]['href'])
-email=checkForPRS(menEventURLS)
-email+=checkForPRS(womenEventURLS)
+emailOn=False
+def cli(emailOnPassed):
+    emailOn=emailOnPassed
+    print("Welcome to sauce's thrower pr tracker :)")
+    print('Email on is set to ' + str(emailOn))
+    print("What would you like to do?")
+    print("1) Run the check for prs and 'print' the results to the console")
+    print("2) Update all throwers prs that are in the 'system'")
+    print("3) Turn on the auto email functionality?")
+    print("4) Exit")
 
-
-print("Welcome to sauce's thrower pr tracker :)")
-print("What would you like to do?")
-print("1) Run the check for prs and 'print' the results to the console")
-print("2) Update all throwers prs that are in the 'system'")
-print("3) Turn on the auto email functionality?")
-print("4) Exit")
-
-choice = input()
-while not user_input_is_valid(choice):
     choice = input()
-
+    while not user_input_is_valid(choice,1,4):
+        choice = input()
+    choice = int(choice)
+    if choice==1:
+        print('Which meet would you like to check?')
+        for x in range(0,10):
+            print(str(x)+') '+mostRecentMeets[x].text)
+        meetChoice=input()
+        while not user_input_is_valid(meetChoice,0,9):
+            meetChoice = input()
+        meetChoice = int(meetChoice)
+        menEventURLS,womenEventURLS=getMenAndWomenEventURLS('https://www.tfrrs.org'+mostRecentMeets[meetChoice]['href'])
+        email='\nMEN\n'+checkForPRS(menEventURLS)
+        email+='\nWOMEN\n'+checkForPRS(womenEventURLS)
+        print(email)
+        print('Done! NEXT')
+        cli(emailOn)
+    elif choice==2:
+        print('updating app pr information')
+        getThrowersInDBCurrPRS()
+        print('Done! NEXT')
+        cli(emailOn)
+    elif choice==3:
+        emailOn=not emailOn
+        print('Email on is set to ' + str(emailOn))
+        print('Done! NEXT')
+        cli(emailOn)
+    elif choice==4:
+        print('Goodbye')
 #This functon takes the input ur and finds the roster section on the page then grabs all the names and tffrs links and returns them as a dictionary as key value pairs name is the key
 # menEventURLS,womenEventURLS = getMenAndWomenEventURLS(meetURL)
 
 # email = checkForPRS(menEventURLS)
 # email+= checkForPRS(womenEventURLS)
 
-
+cli(emailOn)
 # con.commit()
 con.close()
+
+# Trouble shooting commands
+# import sqlite3
+# con = sqlite3.connect("throwersprs.db")
+# cur = con.cursor()
+# cur.execute("insert into athletes (name) values('Lupe Corn')")
+# con.commit()
+#cur.execute("select * from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ?",('Lupe Corn',)).fetchone()[0]
+#cur.execute("select distinct * from athletes").fetchall()
