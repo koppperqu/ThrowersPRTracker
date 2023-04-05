@@ -1,5 +1,8 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
+import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy import URL
 
 #This should run everyday at midnight to update current prs in the system
 #this will prevent errors from mis entries in TFRRS so it will update prs
@@ -64,8 +67,26 @@ for index,eachPerson in enumerate(names):
     if(isThrower):
         throwersEvents.append(newEvents)
         throwersMarks.append(newMarks)
+
+import sqlalchemy
+from sqlalchemy import create_engine
+from sqlalchemy import URL
+
+url_object = URL.create(
+    "sqlite",
+    database="ThrowersPRTracker/appdb",
+)
+engine = create_engine(url_object)
+from sqlalchemy import text
+
+with engine.connect() as conn:
+    result = conn.execute(text("select 'hello world'"))
+    print(result.all())
 #At this point we only have people who have thrown a throwing event so we 
 #can assume we have all throwers unless they have not thrown in an event.
 #the above code should be ran every day at midnight
 for index,eachThrower in enumerate(throwers):
     print(eachThrower,throwersEvents[index],throwersMarks[index])
+    
+    
+    https://docs.sqlalchemy.org/en/20/tutorial/metadata.html
