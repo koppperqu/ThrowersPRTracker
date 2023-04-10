@@ -1,6 +1,7 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+womensTrackURL="https://www.tfrrs.org/teams/tf/WI_college_f_Wis_Stevens_Point.html"
 mensTrackURL="https://www.tfrrs.org/teams/tf/WI_college_m_Wis_Stevens_Point.html"
 email="PR's have been updated due to a new track meet(s)"
 instagram = "Instagram post\n"
@@ -337,3 +338,35 @@ if len(sorted_list)!=0:
 
 print(f"{instagram}\n\n{newAddsToProgram}")
 
+html = urlopen(mensTrackURL)
+soup=BeautifulSoup(html.read(), "html.parser")
+mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('table').findAll('a')
+
+html = urlopen(womensTrackURL)
+soup=BeautifulSoup(html.read(), "html.parser")
+mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('table').findAll('a')
+mostRecentMeetsHRefArrays=[]
+mostRecentThrowsMeets=[]
+hrefNumbers=[]
+for eachMeet in mostRecentMensMeets:
+    if 'xc' not in eachMeet['href'].split('/'):
+        for index,eachPart in enumerate(eachMeet['href'].split('/')):
+            if eachPart=='results':
+                hrefNumbers.append(eachMeet['href'].split('/')[index+1])
+                mostRecentThrowsMeets.append(eachMeet)
+
+
+for eachMeet in mostRecentWomensMeets:
+    if 'xc' not in eachMeet['href'].split('/'):
+        for index,eachPart in enumerate(eachMeet['href'].split('/')):
+            if eachPart=='results':
+                if eachMeet['href'].split('/')[index+1] not in hrefNumbers:
+                    for numberIndex,eachNumber in enumerate(hrefNumbers):
+                        if int(eachNumber)>int(eachMeet['href'].split('/')[index+1]):
+                            if int(hrefNumbers[numberIndex])<int(eachMeet['href'].split('/')[index+1]):
+                                hrefNumbers.insert(eachMeet['href'].split('/')[index+1],numberIndex)
+                            else:
+                                hrefNumbers.insert(eachMeet['href'].split('/')[index+1],int(numberIndex+1))
+
+                    hrefNumbers.append(eachMeet['href'].split('/')[index+1])
+                    mostRecentThrowsMeets.append(eachMeet)
