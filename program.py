@@ -7,6 +7,11 @@ email="PR's have been updated due to a new track meet(s)"
 instagram = "Instagram post\n"
 forMatt = "ForMATTed for Matt to get the correct throw for each PR"
 newAddsToProgram="Below contains new people added and new prs if any\n\n"
+#Email should be layed out like the following
+#1)Throw number for each persons pr (compare this list to the istagram list to ensure everyone has a throw number if they pr'd)
+#2)Instagram post formatted (i.e each genders prs by event)
+#3)"Debugging" Information like if someone new was added, new event was added, new pr was added
+
 #Need 2 lists one for prs that happened by checking each persons page to see if th best changed
 #and another one that checks the meet results to get what throw the pr happened on
 #then the 2 lists need to be compared to see if anyone got missed.
@@ -213,10 +218,18 @@ def getCurrentAthletesAndPRS():
                     if prres.mark<throwersMarks[throwerNumber][index]:
                         #A NEW PR
                         print(f"{eachThrower} pr'd in {eachEvent} old mark was {prres.mark} new mark is {throwersMarks[throwerNumber][index]}")
-                        print(f"{prres.athlete_id}")
                         prres.mark=throwersMarks[throwerNumber][index]
                         session.commit()
                         tfrrsPRs.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
+
+def getMenAndWomenEventURLS(meetURL):
+    html = urlopen(meetURL)
+    soup=BeautifulSoup(html.read(), "html.parser")
+    menEvents = soup.find('h3',text="MEN'S EVENTS").find_parent().findAll('a')
+    womenEvents = soup.find('h3',text="WOMEN'S EVENTS").find_parent().findAll('a')
+    menEventURLS=findEventURLS(menEvents)
+    womenEventURLS=findEventURLS(womenEvents)
+    return(menEventURLS,womenEventURLS)
 
 def getCurrentAthletesAndPRSOffline(fileName):
     throwers,throwersEvents,throwersMarks=readFromFileOffline(fileName)
@@ -289,6 +302,57 @@ def readFromFileOffline(filename):
     returnThrowersEvents=data["throwersEvents"]
     returnThrowersMarks=data['throwersMarks']
     return returnThrowers,returnThrowersEvents,returnThrowersMarks
+
+def findEventURLS(listOfEventLinks):
+    events=["Shot Put","Weight Throw","Discus","Hammer","Javelin"]
+    throwsLinks = {"Shot Put":"","Weight Throw":"","Discus":"","Hammer":"","Javelin":"",}
+    for each in listOfEventLinks:
+        if each.text in events:
+            throwsLinks[each.text]=each['href']
+    return(throwsLinks)
+
+def checkForPRSUpdateDBReturnPRThrowNumber(eventURLS):
+    instagram=""
+    email=""
+    for eachEventURL in eventURLS.items():
+        if(eachEventURL[1]!=""):
+            instagram +='\n\n'+eachEventURL[0]+'\n'
+            email +='\n\n'+eachEventURL[0]+'\n'
+            print(eachEventURL[0])
+            names,marks=getEventsNamesAndMarks(eachEventURL[1])
+            for index,eachName in enumerate(names):
+                if(marks[index]!=[]):
+                    res = cur.execute("select count(*) from athletes where name = ?",(eachName,))
+                    count = res.fetchone()[0]
+                    if(count==0):
+                        cur.execute("insert into athletes (name) values(?)",(eachName,))
+                        con.commit()
+                    #Now that everyname is in need to check for prs
+                    #If no pr add a pr
+                    #First need to get highest mark out of the list of marks
+                    #Need to remove 'FOUL' for the max function to work
+                    athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
+                    eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
+                    markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
+                    highestThrowAtMeet=max(markNoFoul)
+                    throwNumber = markNoFoul.index(highestThrowAtMeet)+1
+                    res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
+                    count = res.fetchone()[0]
+                    if(count==0):
+                        cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,highestThrowAtMeet,))
+                        con.commit()
+                    else:
+                        currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
+                        prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
+                        if(currPR<float(highestThrowAtMeet)):
+                            cur.execute("update prs set mark = ? where id = ?",(highestThrowAtMeet,prID,))
+                            con.commit()
+                            instagram +=eachName + ' - '+ highestThrowAtMeet+'\n'
+                            email +=eachName +' throw number '+ str(throwNumber)+'\n'
+        else:
+            print (eachEventURL[0] + " was not thrown")
+    email+=instagram
+    return(email)
 #At this point we only have people who have thrown a throwing event so we 
 #can assume we have all throwers unless they have not thrown in an event.
 #the above code should be ran every day at midnight
@@ -307,7 +371,7 @@ def readFromFileOffline(filename):
 #old data
 #getCurrentAthletesAndPRSOffline('throwersofflinedataOriginal4-6-23.json')
 #updated "new" data
-getCurrentAthletesAndPRSOffline('throwersofflinedataModifedPRS4-6-23.json')
+#getCurrentAthletesAndPRSOffline('throwersofflinedataModifedPRS4-6-23.json')
 
 prAdded=""
 personAdded=""
@@ -338,35 +402,122 @@ if len(sorted_list)!=0:
 
 print(f"{instagram}\n\n{newAddsToProgram}")
 
+
+#REWORKING HOW THE WHOLE THING WORKS TO ADAPT TO MENS MEETS VS WOMENS MEETS
+#Step one is make a combined list of meets for men and women then run them through the program
+#in order they occured, using the dates to order them
+
 html = urlopen(mensTrackURL)
 soup=BeautifulSoup(html.read(), "html.parser")
-mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('table').findAll('a')
-
+mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
 html = urlopen(womensTrackURL)
 soup=BeautifulSoup(html.read(), "html.parser")
-mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('table').findAll('a')
-mostRecentMeetsHRefArrays=[]
-mostRecentThrowsMeets=[]
-hrefNumbers=[]
-for eachMeet in mostRecentMensMeets:
-    if 'xc' not in eachMeet['href'].split('/'):
-        for index,eachPart in enumerate(eachMeet['href'].split('/')):
-            if eachPart=='results':
-                hrefNumbers.append(eachMeet['href'].split('/')[index+1])
-                mostRecentThrowsMeets.append(eachMeet)
-
-
+mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
+mostRecentMeets = mostRecentMensMeets
 for eachMeet in mostRecentWomensMeets:
-    if 'xc' not in eachMeet['href'].split('/'):
-        for index,eachPart in enumerate(eachMeet['href'].split('/')):
-            if eachPart=='results':
-                if eachMeet['href'].split('/')[index+1] not in hrefNumbers:
-                    for numberIndex,eachNumber in enumerate(hrefNumbers):
-                        if int(eachNumber)>int(eachMeet['href'].split('/')[index+1]):
-                            if int(hrefNumbers[numberIndex])<int(eachMeet['href'].split('/')[index+1]):
-                                hrefNumbers.insert(eachMeet['href'].split('/')[index+1],numberIndex)
-                            else:
-                                hrefNumbers.insert(eachMeet['href'].split('/')[index+1],int(numberIndex+1))
+    if eachMeet not in mostRecentMeets:
+        mostRecentMeets.append(eachMeet)
 
-                    hrefNumbers.append(eachMeet['href'].split('/')[index+1])
-                    mostRecentThrowsMeets.append(eachMeet)
+#Now we have a combined list, now we need to sort them and remove XC meets
+meetsToRemove=[]
+for eachMeet in mostRecentMeets:
+    if 'xc' in eachMeet.find('a')['href'].split('/'):
+        meetsToRemove.append(eachMeet)
+        print(eachMeet)
+
+for eachMeet in meetsToRemove:
+    mostRecentMeets.remove(eachMeet)
+
+#Now we have a list of track meets, we need to make sure they are ordered by date.
+mostRecentMeetsByDate=[]
+#Format for mostRecentMeetsByDate {'date':date,'meet':meet}
+
+for eachMeet in mostRecentMeets:
+    inputDate=eachMeet.findAll('td')[0].text
+    if '-' in inputDate:
+                split = inputDate.split('-')
+                split2 = split[1].split(',')
+                inputDate = split[0] +','+split2[1]
+    mostRecentMeetsByDate.append({'date':inputDate,'meet':eachMeet.find('a')})
+
+from datetime import datetime
+# Sort the list in ascending order of dates
+mostRecentMeetsByDate.sort(key = lambda date: datetime.strptime(date['date'], "%B %d, %Y"))
+#Now the meets are sorted oldest to newest, lets look at the list and compare them till we get to the one most recently ran on
+#then we run it on the next one if there is one untill there is not one, then we are done
+f = open("lastMeetProgramRanOn.txt", "r")
+mostRecentlyRanMeet=f.readline().strip()
+mostRecentlyRanMeetDate=f.readline().strip()
+f.close()
+for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
+    if eachMeet['meet'].text==mostRecentlyRanMeet and eachMeet['date']==mostRecentlyRanMeetDate:
+        #We need to run program on the next meet, or if there is no next meet we are done
+            if meetIndex!=len(mostRecentMeetsByDate)-1:
+                #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
+                meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
+                menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
+                email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
+                email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
+                print(email)
+                #after checking set the new most recently ran meet and date to the next one
+                mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
+                mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
+            else:
+                #Otherwise it is the most recently ran meet and is last in list to we save
+                f = open("lastMeetProgramRanOn.txt", "w")
+                f.writelines(eachMeet['meet'].text +"\n")
+                f.writelines(eachMeet['date'])
+                f.close()
+                #This will update the DB after checking for prs from the most recent meet, if it find stuff
+                #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
+                #getCurrentAthletesAndPRS()
+
+#UW-Platteville Opener
+#April  1, 2023
+
+#Format for checkForPRSByMeet dictionary
+#{'event':event,'name':name,'mark':mark,'thrownumber':thrownumber}
+def checkForPRSByMeet(eventURLS):
+itemsToReturn=[]
+meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[37]['meet']['href']
+menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
+# for eachEventURL in eventURLS.items():
+for eachEventURL in menEventURLS:
+    if(eachEventURL[1]!=""):
+        instagram +='\n\n'+eachEventURL[0]+'\n'
+        email +='\n\n'+eachEventURL[0]+'\n'
+        print(eachEventURL[0])
+        names,marks=getEventsNamesAndMarks(eachEventURL[1])
+        for index,eachName in enumerate(names):
+            if(marks[index]!=[]):
+                res = cur.execute("select count(*) from athletes where name = ?",(eachName,))
+                count = res.fetchone()[0]
+                if(count==0):
+                    cur.execute("insert into athletes (name) values(?)",(eachName,))
+                    con.commit()
+                #Now that everyname is in need to check for prs
+                #If no pr add a pr
+                #First need to get highest mark out of the list of marks
+                #Need to remove 'FOUL' for the max function to work
+                athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
+                eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
+                markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
+                highestThrowAtMeet=max(markNoFoul)
+                throwNumber = markNoFoul.index(highestThrowAtMeet)+1
+                res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
+                count = res.fetchone()[0]
+                if(count==0):
+                    cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,highestThrowAtMeet,))
+                    con.commit()
+                else:
+                    currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
+                    prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
+                    if(currPR<float(highestThrowAtMeet)):
+                        cur.execute("update prs set mark = ? where id = ?",(highestThrowAtMeet,prID,))
+                        con.commit()
+                        instagram +=eachName + ' - '+ highestThrowAtMeet+'\n'
+                        email +=eachName +' throw number '+ str(throwNumber)+'\n'
+    else:
+        print (eachEventURL[0] + " was not thrown")
+email+=instagram
+    return(email)
