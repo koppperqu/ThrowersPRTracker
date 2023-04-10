@@ -112,7 +112,6 @@ def getEventsNamesAndMarks(eventURL):
         if (eachAthlete.find('a',text='Wis.-Stevens Point') != None):
             uwspNamesRowsIndex.append(index)
     #Grab all the names and marks for each person
-    
     names=[]
     marks=[]
     for eachIndex in uwspNamesRowsIndex:

@@ -215,9 +215,9 @@ def getCurrentAthletesAndPRS():
                     session.commit()
                     newPRsOrPeopleAdded.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
                 else:
-                    if prres.mark<throwersMarks[throwerNumber][index]:
+                    if prres.mark!=throwersMarks[throwerNumber][index]:
                         #A NEW PR
-                        print(f"{eachThrower} pr'd in {eachEvent} old mark was {prres.mark} new mark is {throwersMarks[throwerNumber][index]}")
+                        print(f"{eachThrower}'s pr in {eachEvent} has been changed, old mark was {prres.mark} new mark is {throwersMarks[throwerNumber][index]}")
                         prres.mark=throwersMarks[throwerNumber][index]
                         session.commit()
                         tfrrsPRs.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
@@ -278,7 +278,7 @@ def getCurrentAthletesAndPRSOffline(fileName):
                     session.commit()
                     newPRsOrPeopleAdded.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
                 else:
-                    if prres.mark<throwersMarks[throwerNumber][index]:
+                    if prres.mark!=throwersMarks[throwerNumber][index]:
                         #A NEW PR
                         print(f"{eachThrower} pr'd in {eachEvent} old mark was {prres.mark} new mark is {throwersMarks[throwerNumber][index]}")
                         prres.mark=throwersMarks[throwerNumber][index]
@@ -310,6 +310,27 @@ def findEventURLS(listOfEventLinks):
         if each.text in events:
             throwsLinks[each.text]=each['href']
     return(throwsLinks)
+
+def getEventsNamesAndMarks(eventURL):   
+    html = urlopen(eventURL)
+    soup=BeautifulSoup(html.read(), "html.parser")
+    allAthletes = soup.find('tbody').findAll('tr')
+    uwspNamesRowsIndex = []
+    #Get all the name row index due to formatting of site
+    for index,eachAthlete in enumerate(allAthletes):
+        if (eachAthlete.find('a',text='Wis.-Stevens Point') != None):
+            uwspNamesRowsIndex.append(index)
+    #Grab all the names and marks for each person
+    names=[]
+    marks=[]
+    for eachIndex in uwspNamesRowsIndex:
+        names.append(allAthletes[eachIndex].find('a').text)
+        unformattedMarks = allAthletes[eachIndex+1].findAll('li')
+        formattedMarks=[]
+        for eachMark in unformattedMarks:
+            formattedMarks.append(eachMark.text.strip())
+        marks.append(formattedMarks)
+    return(names,marks)
 
 def checkForPRSUpdateDBReturnPRThrowNumber(eventURLS):
     instagram=""
@@ -454,11 +475,11 @@ for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
         #We need to run program on the next meet, or if there is no next meet we are done
             if meetIndex!=len(mostRecentMeetsByDate)-1:
                 #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
-                meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
-                menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
-                email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
-                email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
-                print(email)
+                #meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
+                #menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
+                #email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
+                #email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
+                #print(email)
                 #after checking set the new most recently ran meet and date to the next one
                 mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
                 mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
@@ -478,46 +499,83 @@ for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
 #Format for checkForPRSByMeet dictionary
 #{'event':event,'name':name,'mark':mark,'thrownumber':thrownumber}
 def checkForPRSByMeet(eventURLS):
-itemsToReturn=[]
-meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[37]['meet']['href']
-menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
-# for eachEventURL in eventURLS.items():
-for eachEventURL in menEventURLS:
-    if(eachEventURL[1]!=""):
-        instagram +='\n\n'+eachEventURL[0]+'\n'
-        email +='\n\n'+eachEventURL[0]+'\n'
-        print(eachEventURL[0])
-        names,marks=getEventsNamesAndMarks(eachEventURL[1])
-        for index,eachName in enumerate(names):
-            if(marks[index]!=[]):
-                res = cur.execute("select count(*) from athletes where name = ?",(eachName,))
-                count = res.fetchone()[0]
-                if(count==0):
-                    cur.execute("insert into athletes (name) values(?)",(eachName,))
-                    con.commit()
-                #Now that everyname is in need to check for prs
-                #If no pr add a pr
-                #First need to get highest mark out of the list of marks
-                #Need to remove 'FOUL' for the max function to work
-                athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
-                eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
-                markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
-                highestThrowAtMeet=max(markNoFoul)
-                throwNumber = markNoFoul.index(highestThrowAtMeet)+1
-                res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
-                count = res.fetchone()[0]
-                if(count==0):
-                    cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,highestThrowAtMeet,))
-                    con.commit()
-                else:
-                    currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
-                    prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
-                    if(currPR<float(highestThrowAtMeet)):
-                        cur.execute("update prs set mark = ? where id = ?",(highestThrowAtMeet,prID,))
-                        con.commit()
-                        instagram +=eachName + ' - '+ highestThrowAtMeet+'\n'
-                        email +=eachName +' throw number '+ str(throwNumber)+'\n'
-    else:
-        print (eachEventURL[0] + " was not thrown")
-email+=instagram
-    return(email)
+    itemsToReturn=[]
+    session = Session(engine)
+    for eachEventURL in eventURLS.items():
+        if(eachEventURL[1]!=""):
+            eventname=eachEventURL[0]
+            names,marks=getEventsNamesAndMarks(eachEventURL[1])
+            for index,eachName in enumerate(names):
+                if(marks[index]!=[]):
+                    statement = select(Athlete).filter_by(name=eachName)
+                    # get result
+                    res = session.execute(statement).fetchone()
+                    #If name is not in DB, its not a pr as they have no records
+                    if res==None:
+                        break
+                    #Check if there was a pr
+                    #First need to get highest mark out of the list of marks
+                    #Need to remove 'FOUL' for the max function to work
+                    athleteID = res.Athlete.id
+                    dbEventID=0
+                    if eventname=='Shot Put':
+                        statement = select(Event).filter_by(name='SP')
+                        # get result
+                        res = session.execute(statement).fetchone()
+                        dbEventID = res.Event.id
+                    if eventname=='Weight':
+                        statement = select(Event).filter_by(name='WT')
+                        # get result
+                        res = session.execute(statement).fetchone()
+                        dbEventID = res.Event.id
+                    if eventname=='Discus':
+                        statement = select(Event).filter_by(name='DT')
+                        # get result
+                        res = session.execute(statement).fetchone()
+                        dbEventID = res.Event.id
+                    if eventname=='Javelin':
+                        statement = select(Event).filter_by(name='JT')
+                        # get result
+                        res = session.execute(statement).fetchone()
+                        dbEventID = res.Event.id
+                    if eventname=='Hammer':
+                        statement = select(Event).filter_by(name='HT')
+                        # get result
+                        res = session.execute(statement).fetchone()
+                        dbEventID = res.Event.id
+                    marksNoPass = [mark.replace('PASS', '0') for mark in marks[index]]
+                    marksNoFoul = [mark.replace('FOUL', '0') for mark in marksNoPass]
+                    highestThrowAtMeet=max(marksNoFoul)
+                    throwNumber = marksNoFoul.index(highestThrowAtMeet)+1
+                    statement = select(Pr).filter_by(athlete_id=athleteID, event_id = dbEventID)
+                    res = session.execute(statement).fetchone()
+                    if res==None:
+                        #They have no pr so it doesnt count as a pr(for the instagram)
+                        break
+                    else:
+                        currPR = res.Pr.mark
+                        prID = res.Pr.id
+                        if(currPR<float(highestThrowAtMeet)):
+                            res.Pr.mark=float(highestThrowAtMeet)
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #session.commit()
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            #NEED TO UN COMMENT THIS TO ADD TO DB
+                            itemsToReturn.append({'event':eventname,'name':eachName,'mark':highestThrowAtMeet,'thrownumber':throwNumber})
+    return(itemsToReturn)
+
+statement = select(Pr).filter_by(athlete_id=5)
+# get result
+res = session.execute(statement).fetchall()
