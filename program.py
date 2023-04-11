@@ -332,173 +332,9 @@ def getEventsNamesAndMarks(eventURL):
         marks.append(formattedMarks)
     return(names,marks)
 
-def checkForPRSUpdateDBReturnPRThrowNumber(eventURLS):
-    instagram=""
-    email=""
-    for eachEventURL in eventURLS.items():
-        if(eachEventURL[1]!=""):
-            instagram +='\n\n'+eachEventURL[0]+'\n'
-            email +='\n\n'+eachEventURL[0]+'\n'
-            print(eachEventURL[0])
-            names,marks=getEventsNamesAndMarks(eachEventURL[1])
-            for index,eachName in enumerate(names):
-                if(marks[index]!=[]):
-                    res = cur.execute("select count(*) from athletes where name = ?",(eachName,))
-                    count = res.fetchone()[0]
-                    if(count==0):
-                        cur.execute("insert into athletes (name) values(?)",(eachName,))
-                        con.commit()
-                    #Now that everyname is in need to check for prs
-                    #If no pr add a pr
-                    #First need to get highest mark out of the list of marks
-                    #Need to remove 'FOUL' for the max function to work
-                    athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
-                    eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
-                    markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
-                    highestThrowAtMeet=max(markNoFoul)
-                    throwNumber = markNoFoul.index(highestThrowAtMeet)+1
-                    res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
-                    count = res.fetchone()[0]
-                    if(count==0):
-                        cur.execute("insert into prs (athleteID,eventID,mark)values (?,?,?)",(athleteID,eventID,highestThrowAtMeet,))
-                        con.commit()
-                    else:
-                        currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
-                        prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
-                        if(currPR<float(highestThrowAtMeet)):
-                            cur.execute("update prs set mark = ? where id = ?",(highestThrowAtMeet,prID,))
-                            con.commit()
-                            instagram +=eachName + ' - '+ highestThrowAtMeet+'\n'
-                            email +=eachName +' throw number '+ str(throwNumber)+'\n'
-        else:
-            print (eachEventURL[0] + " was not thrown")
-    email+=instagram
-    return(email)
-#At this point we only have people who have thrown a throwing event so we 
-#can assume we have all throwers unless they have not thrown in an event.
-#the above code should be ran every day at midnight
-
-
-#the above code should be ran every day at midnight
-#Saving results from running the above code so I
-#I can work on this offline if necessary
-#This can be remove when implementing the final version so it 
-
-#For when deploying
-#getCurrentAthletesAndPRS()
-
-#missing people and prs and events
-#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginalMissingPeople4-6-23.json')
-#old data
-#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginal4-6-23.json')
-#updated "new" data
-#getCurrentAthletesAndPRSOffline('throwersofflinedataModifedPRS4-6-23.json')
-
-prAdded=""
-personAdded=""
-eventAdded=""
-for each in newPRsOrPeopleAdded:
-    if each['mark']!=None:
-        prAdded=prAdded+f"First record was added for {each['name']} in the {each['event']} mark was {each['mark']}\n"
-    else:
-        if each['name']!=None:
-            personAdded=personAdded+f"{each['name']} was added to the DB, probably their first meet, if not somethings wrong\n"
-        if each['event']!=None:
-            eventAdded=eventAdded+f"{each['event']} was added to the DB, something is most likley drastically wrong CALL HELP\n"
-
-newAddsToProgram=newAddsToProgram+personAdded+prAdded+eventAdded
-
-
-sorted_list = sorted(tfrrsPRs,key=lambda x:(x['event'],-x['mark']))
-if len(sorted_list)!=0:
-    event=sorted_list[0]['event']
-    instagram = instagram + (f"\n{event}\n")
-    for index,each in enumerate(sorted_list):
-        instagram = instagram + (f"{each['name']} - {each['mark']}\n")
-        if index==len(sorted_list)-1:            
-            break
-        if event!=sorted_list[index+1]['event']:
-            instagram = instagram + (f"\n{sorted_list[index+1]['event']}\n")
-            event=sorted_list[index+1]['event']
-
-print(f"{instagram}\n\n{newAddsToProgram}")
-
-
-#REWORKING HOW THE WHOLE THING WORKS TO ADAPT TO MENS MEETS VS WOMENS MEETS
-#Step one is make a combined list of meets for men and women then run them through the program
-#in order they occured, using the dates to order them
-
-html = urlopen(mensTrackURL)
-soup=BeautifulSoup(html.read(), "html.parser")
-mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
-html = urlopen(womensTrackURL)
-soup=BeautifulSoup(html.read(), "html.parser")
-mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
-mostRecentMeets = mostRecentMensMeets
-for eachMeet in mostRecentWomensMeets:
-    if eachMeet not in mostRecentMeets:
-        mostRecentMeets.append(eachMeet)
-
-#Now we have a combined list, now we need to sort them and remove XC meets
-meetsToRemove=[]
-for eachMeet in mostRecentMeets:
-    if 'xc' in eachMeet.find('a')['href'].split('/'):
-        meetsToRemove.append(eachMeet)
-        print(eachMeet)
-
-for eachMeet in meetsToRemove:
-    mostRecentMeets.remove(eachMeet)
-
-#Now we have a list of track meets, we need to make sure they are ordered by date.
-mostRecentMeetsByDate=[]
-#Format for mostRecentMeetsByDate {'date':date,'meet':meet}
-
-for eachMeet in mostRecentMeets:
-    inputDate=eachMeet.findAll('td')[0].text
-    if '-' in inputDate:
-                split = inputDate.split('-')
-                split2 = split[1].split(',')
-                inputDate = split[0] +','+split2[1]
-    mostRecentMeetsByDate.append({'date':inputDate,'meet':eachMeet.find('a')})
-
-from datetime import datetime
-# Sort the list in ascending order of dates
-mostRecentMeetsByDate.sort(key = lambda date: datetime.strptime(date['date'], "%B %d, %Y"))
-#Now the meets are sorted oldest to newest, lets look at the list and compare them till we get to the one most recently ran on
-#then we run it on the next one if there is one untill there is not one, then we are done
-f = open("lastMeetProgramRanOn.txt", "r")
-mostRecentlyRanMeet=f.readline().strip()
-mostRecentlyRanMeetDate=f.readline().strip()
-f.close()
-for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
-    if eachMeet['meet'].text==mostRecentlyRanMeet and eachMeet['date']==mostRecentlyRanMeetDate:
-        #We need to run program on the next meet, or if there is no next meet we are done
-            if meetIndex!=len(mostRecentMeetsByDate)-1:
-                #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
-                #meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
-                #menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
-                #email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
-                #email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
-                #print(email)
-                #after checking set the new most recently ran meet and date to the next one
-                mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
-                mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
-            else:
-                #Otherwise it is the most recently ran meet and is last in list to we save
-                f = open("lastMeetProgramRanOn.txt", "w")
-                f.writelines(eachMeet['meet'].text +"\n")
-                f.writelines(eachMeet['date'])
-                f.close()
-                #This will update the DB after checking for prs from the most recent meet, if it find stuff
-                #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
-                #getCurrentAthletesAndPRS()
-
-#UW-Platteville Opener
-#April  1, 2023
-
 #Format for checkForPRSByMeet dictionary
 #{'event':event,'name':name,'mark':mark,'thrownumber':thrownumber}
-def checkForPRSByMeet(eventURLS):
+def checkForPRSByMeetReturnThrowNumber(eventURLS):
     itemsToReturn=[]
     session = Session(engine)
     for eachEventURL in eventURLS.items():
@@ -548,15 +384,16 @@ def checkForPRSByMeet(eventURLS):
                     highestThrowAtMeet=max(marksNoFoul)
                     throwNumber = marksNoFoul.index(highestThrowAtMeet)+1
                     statement = select(Pr).filter_by(athlete_id=athleteID, event_id = dbEventID)
-                    res = session.execute(statement).fetchone()
+                    res = session.scalars(statement).one_or_none()
                     if res==None:
                         #They have no pr so it doesnt count as a pr(for the instagram)
                         break
                     else:
-                        currPR = res.Pr.mark
-                        prID = res.Pr.id
+                        currPR = res.mark
+                        prID = res.id
                         if(currPR<float(highestThrowAtMeet)):
-                            res.Pr.mark=float(highestThrowAtMeet)
+                            res = session.scalars(statement).one_or_none()
+                            res.mark=float(highestThrowAtMeet)
                             #NEED TO UN COMMENT THIS TO ADD TO DB
                             #NEED TO UN COMMENT THIS TO ADD TO DB
                             #NEED TO UN COMMENT THIS TO ADD TO DB
@@ -576,6 +413,138 @@ def checkForPRSByMeet(eventURLS):
                             itemsToReturn.append({'event':eventname,'name':eachName,'mark':highestThrowAtMeet,'thrownumber':throwNumber})
     return(itemsToReturn)
 
-statement = select(Pr).filter_by(athlete_id=5)
+def getMostRecentMeetsAndOrderThem():
+    html = urlopen(mensTrackURL)
+    soup=BeautifulSoup(html.read(), "html.parser")
+    mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
+    html = urlopen(womensTrackURL)
+    soup=BeautifulSoup(html.read(), "html.parser")
+    mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
+    mostRecentMeets = mostRecentMensMeets
+    for eachMeet in mostRecentWomensMeets:
+        if eachMeet not in mostRecentMeets:
+            mostRecentMeets.append(eachMeet)
+    #Now we have a combined list, now we need to sort them and remove XC meets
+    meetsToRemove=[]
+    for eachMeet in mostRecentMeets:
+        if 'xc' in eachMeet.find('a')['href'].split('/'):
+            meetsToRemove.append(eachMeet)
+    for eachMeet in meetsToRemove:
+        mostRecentMeets.remove(eachMeet)
+    #Now we have a list of track meets, we need to make sure they are ordered by date.
+    mostRecentMeetsByDate=[]
+    #Format for mostRecentMeetsByDate {'date':date,'meet':meet}
+    for eachMeet in mostRecentMeets:
+        inputDate=eachMeet.findAll('td')[0].text
+        if '-' in inputDate:
+                    split = inputDate.split('-')
+                    split2 = split[1].split(',')
+                    inputDate = split[0] +','+split2[1]
+        mostRecentMeetsByDate.append({'date':inputDate,'meet':eachMeet.find('a')})
+    from datetime import datetime
+    # Sort the list in ascending order of dates
+    mostRecentMeetsByDate.sort(key = lambda date: datetime.strptime(date['date'], "%B %d, %Y"))
+    return (mostRecentMeetsByDate)
+
+#statement = select(Pr).filter_by(athlete_id=5)
 # get result
-res = session.execute(statement).fetchall()
+#res = session.execute(statement).fetchall()
+
+#For offline testing purposes
+#missing people and prs and events
+#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginalMissingPeople4-6-23.json')
+#old data
+#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginal4-6-23.json')
+#updated "new" data
+#getCurrentAthletesAndPRSOffline('throwersofflinedataModifedPRS4-6-23.json')
+
+#Check the most recent meets here
+
+mostRecentMeetsByDate=getMostRecentMeetsAndOrderThem()
+
+#After getting most recent meets the following code will run the check for prs
+#While also getting throws numbers then update the DB
+
+f = open("lastMeetProgramRanOn.txt", "r")
+mostRecentlyRanMeet=f.readline().strip()
+mostRecentlyRanMeetDate=f.readline().strip()
+f.close()
+mensPrs=[]
+womensPrs=[]
+for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
+    if eachMeet['meet'].text==mostRecentlyRanMeet and eachMeet['date']==mostRecentlyRanMeetDate:
+        #We need to run program on the next meet, or if there is no next meet we are done
+            if meetIndex!=len(mostRecentMeetsByDate)-1:
+                #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
+                meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
+                menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
+                mensPrs=checkForPRSByMeetReturnThrowNumber(menEventURLS)
+                womensPrs=checkForPRSByMeetReturnThrowNumber(womenEventURLS)
+                #email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
+                #email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
+                #print(email)
+                #after checking set the new most recently ran meet and date to the next one
+                mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
+                mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
+            else:
+                #Otherwise it is the most recently ran meet and is last in list to we save
+                f = open("lastMeetProgramRanOn.txt", "w")
+                f.writelines(eachMeet['meet'].text +"\n")
+                f.writelines(eachMeet['date'])
+                f.close()
+                #This will update the DB after checking for prs from the most recent meet, if it find stuff
+                #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
+                #getCurrentAthletesAndPRS()
+
+#Run below code after getting what throw number was a pr
+
+getCurrentAthletesAndPRS()
+
+prAdded=""
+personAdded=""
+eventAdded=""
+for each in newPRsOrPeopleAdded:
+    if each['mark']!=None:
+        prAdded=prAdded+f"First record was added for {each['name']} in the {each['event']} mark was {each['mark']}\n"
+    else:
+        if each['name']!=None:
+            personAdded=personAdded+f"{each['name']} was added to the DB, probably their first meet, if not somethings wrong\n"
+        if each['event']!=None:
+            eventAdded=eventAdded+f"{each['event']} was added to the DB, something is most likley drastically wrong CALL HELP\n"
+
+newAddsToProgram=newAddsToProgram+personAdded+prAdded+eventAdded
+
+
+sorted_list = sorted(tfrrsPRs,key=lambda x:(x['event'],-x['mark']))
+if len(sorted_list)!=0:
+    event=sorted_list[0]['event']
+    instagram = instagram + (f"\n{event}\n")
+    for index,each in enumerate(sorted_list):
+        instagram = instagram + (f"{each['name']} - {each['mark']}\n")
+        if index==len(sorted_list)-1:            
+            break
+        if event!=sorted_list[index+1]['event']:
+            instagram = instagram + (f"\n{sorted_list[index+1]['event']}\n")
+            event=sorted_list[index+1]['event']
+
+print(f"{instagram}\n\n{newAddsToProgram}")
+
+
+#REWORKING HOW THE WHOLE THING WORKS TO ADAPT TO MENS MEETS VS WOMENS MEETS
+#Step one is make a combined list of meets for men and women then run them through the program
+#in order they occured, using the dates to order them
+
+
+
+
+
+
+
+
+
+#Now the meets are sorted oldest to newest, lets look at the list and compare them till we get to the one most recently ran on
+#then we run it on the next one if there is one untill there is not one, then we are done
+
+
+#UW-Platteville Opener
+#April  1, 2023
