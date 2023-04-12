@@ -528,7 +528,7 @@ try:
                     sender = os.environ.get("PYTHON_EMAIL")
                     password=os.environ.get("EMAIL_PASS")
                     receivers = otherEmails
-                    message = f"From: {sender}\nTo: "
+                    message = f"{message}\n\nFrom: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
                             message += each
