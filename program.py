@@ -531,12 +531,12 @@ try:
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
-                            message += each + ';'
+                            message += each
                             break
                         message += each + ','
                     
                     message += "\nSubject: Throws PRS This Week\n\n"
-                    message += forEmail
+                    message += message + '\n\n'+forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
@@ -601,12 +601,12 @@ try:
         message = f"From: {sender}\nTo: "
         for each in receivers:
             if receivers.index(each)==len(receivers)-1:
-                message += each + ';'
+                message += each
                 break
             message += each + ','
         
         message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
-        message += f"{instagram}\n\n{newAddsToProgram}"
+        message += f"{message}\n\n{instagram}\n\n{newAddsToProgram}"
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
             smtp.login(sender, password)
@@ -621,7 +621,7 @@ except Exception as e:
     message = f"From: {sender}\nTo: "
     for each in receivers:
         if receivers.index(each)==len(receivers)-1:
-            message += each + ';'
+            message += each
             break
         message += each + ','
     
