@@ -244,8 +244,8 @@ def getCurrentAthletesAndPRS():
 def getMenAndWomenEventURLS(meetURL):
     html = urlopen(meetURL)
     soup=BeautifulSoup(html.read(), "html.parser")
-    menEvents = soup.find('h3',text="MEN'S EVENTS").find_parent().findAll('a')
-    womenEvents = soup.find('h3',text="WOMEN'S EVENTS").find_parent().findAll('a')
+    menEvents = soup.find('h3',string="MEN'S EVENTS").find_parent().findAll('a')
+    womenEvents = soup.find('h3',string="WOMEN'S EVENTS").find_parent().findAll('a')
     menEventURLS=findEventURLS(menEvents)
     womenEventURLS=findEventURLS(womenEvents)
     return(menEventURLS,womenEventURLS)
@@ -338,7 +338,7 @@ def getEventsNamesAndMarks(eventURL):
     uwspNamesRowsIndex = []
     #Get all the name row index due to formatting of site
     for index,eachAthlete in enumerate(allAthletes):
-        if (eachAthlete.find('a',text='Wis.-Stevens Point') != None):
+        if (eachAthlete.find('a',string='Wis.-Stevens Point') != None):
             uwspNamesRowsIndex.append(index)
     #Grab all the names and marks for each person
     names=[]
@@ -423,10 +423,10 @@ def checkForPRSByMeetReturnThrowNumber(eventURLS):
 def getMostRecentMeetsAndOrderThem():
     html = urlopen(mensTrackURL)
     soup=BeautifulSoup(html.read(), "html.parser")
-    mostRecentMensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
+    mostRecentMensMeets = soup.find('h3',string="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
     html = urlopen(womensTrackURL)
     soup=BeautifulSoup(html.read(), "html.parser")
-    mostRecentWomensMeets = soup.find('h3',text="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
+    mostRecentWomensMeets = soup.find('h3',string="LATEST RESULTS").find_parent().find_parent().find('tbody').findAll('tr')
     mostRecentMeets = mostRecentMensMeets
     for eachMeet in mostRecentWomensMeets:
         if eachMeet not in mostRecentMeets:
