@@ -134,7 +134,7 @@ class Pr(Base):
 def getAthletesNamesAndTffrsLinks(url):
     html = urlopen(url)
     soup=BeautifulSoup(html.read(), "html.parser")
-    athleteLinks = soup.find('h3',text='ROSTER').find_parent().find('tbody').findAll('a')
+    athleteLinks = soup.find('h3',string='ROSTER').find_parent().find('tbody').findAll('a')
     names=[]
     tffrsLink=[]
     for eachLink in athleteLinks:
@@ -146,7 +146,7 @@ def getAthletesNamesAndTffrsLinks(url):
 def getCurrentAthletesAndPRS():
     html = urlopen(mensTrackURL)
     soup=BeautifulSoup(html.read(), "html.parser")
-    womensTrackURL = 'https://www.tfrrs.org'+soup.find('a',text='Women\'s Track & Field')['href']
+    womensTrackURL = 'https://www.tfrrs.org'+soup.find('a',string='Women\'s Track & Field')['href']
     men,menTffrsLink = getAthletesNamesAndTffrsLinks(mensTrackURL)
     women,womenTffrsLink = getAthletesNamesAndTffrsLinks(womensTrackURL)
     names=men+women
