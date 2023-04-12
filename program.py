@@ -537,7 +537,7 @@ try:
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
-                        smtp.sendmail(sender,receivers,em.as_string())
+                        smtp.sendmail(sender,receivers,em)
                     #after checking the meet set the new most recently ran meet and date to the next one
                     mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
                     mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
@@ -621,4 +621,4 @@ except Exception as e:
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
         smtp.login(sender, password)
-        smtp.sendmail(sender,receivers,em.as_string())
+        smtp.sendmail(sender,receivers,em)
