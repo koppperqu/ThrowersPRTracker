@@ -530,6 +530,9 @@ try:
                     receivers = otherEmails
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
+                        if receivers.index(each)==len(receivers)-1:
+                            message += each
+                            break
                         message += each + ','
                     
                     message += "\nSubject: Throws PRS This Week\n\n"
@@ -597,6 +600,9 @@ try:
         receivers = adminEmails
         message = f"From: {sender}\nTo: "
         for each in receivers:
+            if receivers.index(each)==len(receivers)-1:
+                message += each
+                break
             message += each + ','
         
         message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
@@ -614,6 +620,9 @@ except Exception as e:
     receivers = adminEmails
     message = f"From: {sender}\nTo: "
     for each in receivers:
+        if receivers.index(each)==len(receivers)-1:
+            message += each
+            break
         message += each + ','
     
     message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
