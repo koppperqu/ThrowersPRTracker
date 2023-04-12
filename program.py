@@ -1,3 +1,5 @@
+#EMAIL DOES NOT SEND IF ONLY ONE PERSON IS IN THE OTHEREMAILS LIST OR ADMINEMAILS LIST
+#MUST FIX LATER kinda 
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
