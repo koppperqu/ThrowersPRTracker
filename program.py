@@ -535,8 +535,8 @@ try:
                             break
                         message += each + ','
                     
-                    message += "\nSubject: Throws PRS This Week\n\n"
-                    message += message + '\n\n'+forEmail
+                    message += "Subject: Throws PRS This Week\n\n"
+                    message += forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
@@ -605,8 +605,8 @@ try:
                 break
             message += each + ','
         
-        message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
-        message += f"{message}\n\n{instagram}\n\n{newAddsToProgram}"
+        message += "Subject: THROWS PROGRAM DEBUG STUFF\n\n"
+        message += f"{instagram}\n\n{newAddsToProgram}"
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
             smtp.login(sender, password)
@@ -625,7 +625,7 @@ except Exception as e:
             break
         message += each + ','
     
-    message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
+    message += "Subject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
     message += e
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
