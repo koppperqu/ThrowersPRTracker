@@ -530,7 +530,8 @@ try:
                     receivers = otherEmails
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
-                        message += each + ';'
+                        message += each + ','
+                    
                     message += "\nSubject: Throws PRS This Week\n\n"
                     message += forEmail
                     context = ssl.create_default_context()
@@ -596,8 +597,8 @@ try:
         receivers = adminEmails
         message = f"From: {sender}\nTo: "
         for each in receivers:
-            message += each + ';'
-
+            message += each + ','
+        
         message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
         message += f"{instagram}\n\n{newAddsToProgram}"
         context = ssl.create_default_context()
@@ -613,7 +614,8 @@ except Exception as e:
     receivers = adminEmails
     message = f"From: {sender}\nTo: "
     for each in receivers:
-        message += each + ';'
+        message += each + ','
+    
     message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
     message += e
     context = ssl.create_default_context()
