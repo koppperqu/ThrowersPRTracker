@@ -9,6 +9,7 @@ except IOError:
     f = open("adminEmails.txt", "r")
 
 adminEmails=f.read().split(',')
+adminEmails=[s.strip() for s in adminEmails]
 f.close()
 
 try:
@@ -19,6 +20,7 @@ except IOError:
     f = open("otherEmails.txt", "r")
 
 otherEmails=f.read().split(',')
+otherEmails=[s.strip() for s in otherEmails]
 f.close()
 
 womensTrackURL="https://www.tfrrs.org/teams/tf/WI_college_f_Wis_Stevens_Point.html"
@@ -531,7 +533,7 @@ try:
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
-                            message += each.strip()
+                            message += each
                             break
                         message += each + ','
                     
@@ -601,7 +603,7 @@ try:
         message = f"From: {sender}\nTo: "
         for each in receivers:
             if receivers.index(each)==len(receivers)-1:
-                message += each.strip()
+                message += each
                 break
             message += each + ','
         
@@ -621,7 +623,7 @@ except Exception as e:
     message = f"From: {sender}\nTo: "
     for each in receivers:
         if receivers.index(each)==len(receivers)-1:
-            message += each.strip()
+            message += each
             break
         message += each + ','
     
