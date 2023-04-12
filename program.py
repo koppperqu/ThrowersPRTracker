@@ -531,7 +531,7 @@ try:
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
-                            message += each
+                            message += each + ';'
                             break
                         message += each + ','
                     
@@ -601,7 +601,7 @@ try:
         message = f"From: {sender}\nTo: "
         for each in receivers:
             if receivers.index(each)==len(receivers)-1:
-                message += each
+                message += each + ';'
                 break
             message += each + ','
         
@@ -621,7 +621,7 @@ except Exception as e:
     message = f"From: {sender}\nTo: "
     for each in receivers:
         if receivers.index(each)==len(receivers)-1:
-            message += each
+            message += each + ';'
             break
         message += each + ','
     
