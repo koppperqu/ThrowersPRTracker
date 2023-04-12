@@ -531,11 +531,11 @@ try:
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
-                            message += each
+                            message += each.strip()
                             break
                         message += each + ','
                     
-                    message += "Subject: Throws PRS This Week\n\n"
+                    message += "\nSubject: Throws PRS This Week\n\n"
                     message += message+'\n\n'+forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
@@ -601,11 +601,11 @@ try:
         message = f"From: {sender}\nTo: "
         for each in receivers:
             if receivers.index(each)==len(receivers)-1:
-                message += each
+                message += each.strip()
                 break
             message += each + ','
         
-        message += "Subject: THROWS PROGRAM DEBUG STUFF\n\n"
+        message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
         message += f"{instagram}\n\n{newAddsToProgram}"
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
@@ -621,11 +621,11 @@ except Exception as e:
     message = f"From: {sender}\nTo: "
     for each in receivers:
         if receivers.index(each)==len(receivers)-1:
-            message += each
+            message += each.strip()
             break
         message += each + ','
     
-    message += "Subject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
+    message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
     message += e
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
