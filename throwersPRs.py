@@ -148,9 +148,11 @@ def checkForPRS(eventURLS):
                     #Need to remove 'FOUL' for the max function to work
                     athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
                     eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
-                    markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
-                    highestThrowAtMeet=max(markNoFoul)
-                    throwNumber = markNoFoul.index(highestThrowAtMeet)+1
+                    markNoPass = [mark.replace('PASS', '0') for mark in marks[index]]
+                    markNoFoul = [mark.replace('FOUL', '0') for mark in markNoPass]
+                    marksToFloat= [float(mark) for mark in markNoFoul]
+                    highestThrowAtMeet=max(marksToFloat)
+                    throwNumber = marksToFloat.index(highestThrowAtMeet)+1
                     res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
                     count = res.fetchone()[0]
                     if(count==0):

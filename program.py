@@ -1,12 +1,30 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+try:
+    f = open("adminEmails.txt", "r")
+except IOError:
+    f = open("adminEmails.txt", 'w')
+    f.close()
+    f = open("adminEmails.txt", "r")
+
+adminEmails=f.read().split(',')
+f.close()
+
+try:
+    f = open("otherEmails.txt", "r")
+except IOError:
+    f = open("otherEmails.txt", 'w')
+    f.close()
+    f = open("otherEmails.txt", "r")
+
+otherEmails=f.read().split(',')
+f.close()
+
 womensTrackURL="https://www.tfrrs.org/teams/tf/WI_college_f_Wis_Stevens_Point.html"
 mensTrackURL="https://www.tfrrs.org/teams/tf/WI_college_m_Wis_Stevens_Point.html"
-email="PR's have been updated due to a new track meet(s)"
-instagram = "Instagram post\n"
-forMatt = "ForMATTed for Matt to get the correct throw for each PR"
-newAddsToProgram="Below contains new people added and new prs if any\n\n"
+instagram = ""
+newAddsToProgram=""
 #Email should be layed out like the following
 #1)Throw number for each persons pr (compare this list to the istagram list to ensure everyone has a throw number if they pr'd)
 #2)Instagram post formatted (i.e each genders prs by event)
@@ -221,6 +239,7 @@ def getCurrentAthletesAndPRS():
                         prres.mark=throwersMarks[throwerNumber][index]
                         session.commit()
                         tfrrsPRs.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
+    session.close()
 
 def getMenAndWomenEventURLS(meetURL):
     html = urlopen(meetURL)
@@ -284,6 +303,7 @@ def getCurrentAthletesAndPRSOffline(fileName):
                         prres.mark=throwersMarks[throwerNumber][index]
                         session.commit()
                         tfrrsPRs.append({'name':eachThrower, 'event':eachEvent, 'mark':throwersMarks[throwerNumber][index]})
+    session.close()
 
 import json
 
@@ -348,7 +368,8 @@ def checkForPRSByMeetReturnThrowNumber(eventURLS):
                     res = session.execute(statement).fetchone()
                     #If name is not in DB, its not a pr as they have no records
                     if res==None:
-                        break
+                        print(eachName)
+                        continue
                     #Check if there was a pr
                     #First need to get highest mark out of the list of marks
                     #Need to remove 'FOUL' for the max function to work
@@ -381,36 +402,22 @@ def checkForPRSByMeetReturnThrowNumber(eventURLS):
                         dbEventID = res.Event.id
                     marksNoPass = [mark.replace('PASS', '0') for mark in marks[index]]
                     marksNoFoul = [mark.replace('FOUL', '0') for mark in marksNoPass]
-                    highestThrowAtMeet=max(marksNoFoul)
-                    throwNumber = marksNoFoul.index(highestThrowAtMeet)+1
+                    marksToFloat= [float(mark) for mark in marksNoFoul]
+                    highestThrowAtMeet=max(marksToFloat)
+                    throwNumber = marksToFloat.index(highestThrowAtMeet)+1
                     statement = select(Pr).filter_by(athlete_id=athleteID, event_id = dbEventID)
                     res = session.scalars(statement).one_or_none()
                     if res==None:
                         #They have no pr so it doesnt count as a pr(for the instagram)
-                        break
+                        continue
                     else:
                         currPR = res.mark
                         prID = res.id
                         if(currPR<float(highestThrowAtMeet)):
-                            res = session.scalars(statement).one_or_none()
                             res.mark=float(highestThrowAtMeet)
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #session.commit()
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            #NEED TO UN COMMENT THIS TO ADD TO DB
-                            itemsToReturn.append({'event':eventname,'name':eachName,'mark':highestThrowAtMeet,'thrownumber':throwNumber})
+                            session.commit()
+                            itemsToReturn.append({'event':eventname,'name':eachName,'mark':float(highestThrowAtMeet),'thrownumber':throwNumber})
+    session.close()
     return(itemsToReturn)
 
 def getMostRecentMeetsAndOrderThem():
@@ -446,105 +453,172 @@ def getMostRecentMeetsAndOrderThem():
     mostRecentMeetsByDate.sort(key = lambda date: datetime.strptime(date['date'], "%B %d, %Y"))
     return (mostRecentMeetsByDate)
 
-#statement = select(Pr).filter_by(athlete_id=5)
-# get result
-#res = session.execute(statement).fetchall()
+def addToForMatt(sortedPrs):
+    currEvent=sortedPrs[0]['event']
+    textToReturn = currEvent +"\n\n"
+    for each in sortedPrs:
+        if each['event']==currEvent:
+            #just add mark/number
+            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {each['mark']}\n"
+        else:
+            currEvent=each['event']
+            #add new event and mark/number
+            textToReturn += "\n" +currEvent +"\n\n"
+            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {each['mark']}\n"
+    return(textToReturn)
 
-#For offline testing purposes
-#missing people and prs and events
-#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginalMissingPeople4-6-23.json')
-#old data
-#getCurrentAthletesAndPRSOffline('throwersofflinedataOriginal4-6-23.json')
-#updated "new" data
-#getCurrentAthletesAndPRSOffline('throwersofflinedataModifedPRS4-6-23.json')
+def addToForInstagram(sortedPrs):
+    currEvent=sortedPrs[0]['event']
+    textToReturn = currEvent +"\n"
+    for each in sortedPrs:
+        if each['event']==currEvent:
+            #just add mark/number
+            textToReturn += f"{each['name']} - {each['mark']}\n"
+        else:
+            currEvent=each['event']
+            #add new event and mark/number
+            textToReturn += "\n" +currEvent +"\n"
+            textToReturn += f"{each['name']} - {each['mark']}\n"
+    return(textToReturn)
 
-#Check the most recent meets here
+try:
+    #MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE 
 
-mostRecentMeetsByDate=getMostRecentMeetsAndOrderThem()
+    #First get and order most recent meets
 
-#After getting most recent meets the following code will run the check for prs
-#While also getting throws numbers then update the DB
+    mostRecentMeetsByDate=getMostRecentMeetsAndOrderThem()
 
-f = open("lastMeetProgramRanOn.txt", "r")
-mostRecentlyRanMeet=f.readline().strip()
-mostRecentlyRanMeetDate=f.readline().strip()
-f.close()
-mensPrs=[]
-womensPrs=[]
-for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
-    if eachMeet['meet'].text==mostRecentlyRanMeet and eachMeet['date']==mostRecentlyRanMeetDate:
-        #We need to run program on the next meet, or if there is no next meet we are done
-            if meetIndex!=len(mostRecentMeetsByDate)-1:
-                #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
-                meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
-                menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
-                mensPrs=checkForPRSByMeetReturnThrowNumber(menEventURLS)
-                womensPrs=checkForPRSByMeetReturnThrowNumber(womenEventURLS)
-                #email='\nMEN\n'+checkForPRSByMeet(menEventURLS)
-                #email+='\nWOMEN\n'+checkForPRSByMeet(womenEventURLS)
-                #print(email)
-                #after checking set the new most recently ran meet and date to the next one
-                mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
-                mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
-            else:
-                #Otherwise it is the most recently ran meet and is last in list to we save
-                f = open("lastMeetProgramRanOn.txt", "w")
-                f.writelines(eachMeet['meet'].text +"\n")
-                f.writelines(eachMeet['date'])
-                f.close()
-                #This will update the DB after checking for prs from the most recent meet, if it find stuff
-                #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
-                #getCurrentAthletesAndPRS()
+    #After getting most recent meets the following code will run the check for prs
+    #While also getting throws numbers for prs then update the DB
+    #This will happend for every meet that the program has not ran on yet
+    #Hopefully this implmentation works when more than one meet is done on a day
+    #And when more than one meet is done in a week
 
-#Run below code after getting what throw number was a pr
+    f = open("lastMeetProgramRanOn.txt", "r")
+    mostRecentlyRanMeet=f.readline().strip()
+    mostRecentlyRanMeetDate=f.readline().strip()
+    f.close()
+    mensPrs=[]
+    womensPrs=[]
+    for meetIndex,eachMeet in enumerate(mostRecentMeetsByDate):
+        if eachMeet['meet'].text==mostRecentlyRanMeet and eachMeet['date']==mostRecentlyRanMeetDate:
+            #We need to run program on the next meet, or if there is no next meet we are done
+                if meetIndex!=len(mostRecentMeetsByDate)-1:
+                    #we know the one we are on is not the last one in the list, so we can check the NEXT for prs
+                    meetUrl="https://www.tfrrs.org"+ mostRecentMeetsByDate[meetIndex+1]['meet']['href']
+                    menEventURLS,womenEventURLS=getMenAndWomenEventURLS(meetUrl)
+                    mensPrs=checkForPRSByMeetReturnThrowNumber(menEventURLS)
+                    womensPrs=checkForPRSByMeetReturnThrowNumber(womenEventURLS)
+                    #Here is where the email is formatted then sent out
+                    forEmail = f"{mostRecentMeetsByDate[meetIndex+1]['meet'].text} - {mostRecentMeetsByDate[meetIndex+1]['date']} \n"
+                    sortedMensPrs=sorted(mensPrs,key=lambda x:(x['event'],-x['mark']))
+                    sortedWomensPrs=sorted(womensPrs,key=lambda x:(x['event'],-x['mark']))
+                    if len(sortedMensPrs)!=0:
+                        forEmail += "MEN\n\n"
+                        forEmail += addToForMatt(sortedMensPrs)
+                        forEmail += "\nWOMEN\n\n"
+                        forEmail += addToForMatt(sortedWomensPrs)
+                        forEmail += "\n\nINSTAGRAM \n\nMen\n\n"
+                        forEmail += addToForInstagram(sortedMensPrs)
+                        forEmail += "\nWomen\n\n"
+                        forEmail += addToForInstagram(sortedWomensPrs)
+                    from email.message import EmailMessage
+                    import ssl
+                    import smtplib
+                    import os
+                    sender = os.environ.get("PYTHON_EMAIL")
+                    password=os.environ.get("EMAIL_PASS")
+                    receivers = otherEmails
+                    em = EmailMessage()
+                    em['From']=sender
+                    em['To']=receivers
+                    em['Subject']='Throws PRS This Week'
+                    em.set_content(forEmail)
+                    context = ssl.create_default_context()
+                    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+                        smtp.login(sender, password)
+                        smtp.sendmail(sender,receivers,em.as_string())
+                    #after checking the meet set the new most recently ran meet and date to the next one
+                    mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
+                    mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
+                else:
+                    #Otherwise it is the most recently ran meet and is last in list to we save
+                    f = open("lastMeetProgramRanOn.txt", "w")
+                    f.writelines(eachMeet['meet'].text +"\n")
+                    f.writelines(eachMeet['date'])
+                    f.close()
+                    
+    #Run below code after getting what throw number was a pr and sending out email for throw number
+    #Then after that the and all meets have been ran on the next code will send just me
+    #An email to see if anything was missed or if new people are added
+    #This will update the DB after checking for prs from the most recent meet, if it finds stuff
+    #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
 
-getCurrentAthletesAndPRS()
+    getCurrentAthletesAndPRS()
 
-prAdded=""
-personAdded=""
-eventAdded=""
-for each in newPRsOrPeopleAdded:
-    if each['mark']!=None:
-        prAdded=prAdded+f"First record was added for {each['name']} in the {each['event']} mark was {each['mark']}\n"
-    else:
-        if each['name']!=None:
-            personAdded=personAdded+f"{each['name']} was added to the DB, probably their first meet, if not somethings wrong\n"
-        if each['event']!=None:
-            eventAdded=eventAdded+f"{each['event']} was added to the DB, something is most likley drastically wrong CALL HELP\n"
+    #The code to format the email sent to me
+    #VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+    prAdded=""
+    personAdded=""
+    eventAdded=""
+    for each in newPRsOrPeopleAdded:
+        if each['mark']!=None:
+            prAdded=prAdded+f"First record was added for {each['name']} in the {each['event']} mark was {each['mark']}\n"
+        else:
+            if each['name']!=None:
+                personAdded=personAdded+f"{each['name']} was added to the DB, probably their first meet, if not somethings wrong\n"
+            if each['event']!=None:
+                eventAdded=eventAdded+f"{each['event']} was added to the DB, something is most likley drastically wrong CALL HELP\n"
 
-newAddsToProgram=newAddsToProgram+personAdded+prAdded+eventAdded
+    if(newPRsOrPeopleAdded!=[]):
+        newAddsToProgram = 'Below contains new people added and new prs if any\n\n'
+        newAddsToProgram=newAddsToProgram+personAdded+prAdded+eventAdded
 
+    sorted_list = sorted(tfrrsPRs,key=lambda x:(x['event'],-x['mark']))
+    if len(sorted_list)!=0:
+        event=sorted_list[0]['event']
+        instagram = 'PRS added or changed after most recent meet\n'
+        instagram = instagram + (f"\n{event}\n")
+        for index,each in enumerate(sorted_list):
+            instagram = instagram + (f"{each['name']} - {each['mark']}\n")
+            if index==len(sorted_list)-1:            
+                break
+            if event!=sorted_list[index+1]['event']:
+                instagram = instagram + (f"\n{sorted_list[index+1]['event']}\n")
+                event=sorted_list[index+1]['event']
 
-sorted_list = sorted(tfrrsPRs,key=lambda x:(x['event'],-x['mark']))
-if len(sorted_list)!=0:
-    event=sorted_list[0]['event']
-    instagram = instagram + (f"\n{event}\n")
-    for index,each in enumerate(sorted_list):
-        instagram = instagram + (f"{each['name']} - {each['mark']}\n")
-        if index==len(sorted_list)-1:            
-            break
-        if event!=sorted_list[index+1]['event']:
-            instagram = instagram + (f"\n{sorted_list[index+1]['event']}\n")
-            event=sorted_list[index+1]['event']
-
-print(f"{instagram}\n\n{newAddsToProgram}")
-
-
-#REWORKING HOW THE WHOLE THING WORKS TO ADAPT TO MENS MEETS VS WOMENS MEETS
-#Step one is make a combined list of meets for men and women then run them through the program
-#in order they occured, using the dates to order them
-
-
-
-
-
-
-
-
-
-#Now the meets are sorted oldest to newest, lets look at the list and compare them till we get to the one most recently ran on
-#then we run it on the next one if there is one untill there is not one, then we are done
-
-
-#UW-Platteville Opener
-#April  1, 2023
+    #If there is no new adds or changes to instagam dont send out an email
+    if newAddsToProgram!='' or instagram!='':
+        from email.message import EmailMessage
+        import ssl
+        import smtplib
+        import os
+        sender = os.environ.get("PYTHON_EMAIL")
+        password=os.environ.get("EMAIL_PASS")
+        receivers = adminEmails
+        em = EmailMessage()
+        em['From']=sender
+        em['To']=receivers
+        em['Subject']='THROWS PROGRAM DEBUG STUFF'
+        em.set_content(f"{instagram}\n\n{newAddsToProgram}")
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+            smtp.login(sender, password)
+            smtp.sendmail(sender,receivers,em.as_string())
+except Exception as e:
+    from email.message import EmailMessage
+    import ssl
+    import smtplib
+    import os
+    sender = os.environ.get("PYTHON_EMAIL")
+    password=os.environ.get("EMAIL_PASS")
+    receivers = adminEmails
+    em = EmailMessage()
+    em['From']=sender
+    em['To']=receivers
+    em['Subject']='PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION'
+    em.set_content(e)
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
+        smtp.login(sender, password)
+        smtp.sendmail(sender,receivers,em.as_string())
