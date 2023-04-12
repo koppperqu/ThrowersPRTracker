@@ -522,22 +522,21 @@ try:
                         forEmail += addToForInstagram(sortedMensPrs)
                         forEmail += "\nWomen\n\n"
                         forEmail += addToForInstagram(sortedWomensPrs)
-                    from email.message import EmailMessage
                     import ssl
                     import smtplib
                     import os
                     sender = os.environ.get("PYTHON_EMAIL")
                     password=os.environ.get("EMAIL_PASS")
                     receivers = otherEmails
-                    em = EmailMessage()
-                    em['From']=sender
-                    em['To']=receivers
-                    em['Subject']='Throws PRS This Week'
-                    em.set_content(forEmail)
+                    message = f"From: {sender}\nTo: "
+                    for each in receivers:
+                        message += each + ';'
+                    message += "\nSubject: Throws PRS This Week\n\n"
+                    message += forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
-                        smtp.sendmail(sender,receivers,em)
+                        smtp.sendmail(sender,receivers,message)
                     #after checking the meet set the new most recently ran meet and date to the next one
                     mostRecentlyRanMeet = mostRecentMeetsByDate[meetIndex+1]['meet'].text
                     mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
@@ -589,36 +588,35 @@ try:
 
     #If there is no new adds or changes to instagam dont send out an email
     if newAddsToProgram!='' or instagram!='':
-        from email.message import EmailMessage
         import ssl
         import smtplib
         import os
         sender = os.environ.get("PYTHON_EMAIL")
         password=os.environ.get("EMAIL_PASS")
         receivers = adminEmails
-        em = EmailMessage()
-        em['From']=sender
-        em['To']=receivers
-        em['Subject']='THROWS PROGRAM DEBUG STUFF'
-        em.set_content(f"{instagram}\n\n{newAddsToProgram}")
+        message = f"From: {sender}\nTo: "
+        for each in receivers:
+            message += each + ';'
+
+        message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
+        message += f"{instagram}\n\n{newAddsToProgram}"
         context = ssl.create_default_context()
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
             smtp.login(sender, password)
-            smtp.sendmail(sender,receivers,em.as_string())
+            smtp.sendmail(sender,receivers,message)
 except Exception as e:
-    from email.message import EmailMessage
     import ssl
     import smtplib
     import os
     sender = os.environ.get("PYTHON_EMAIL")
     password=os.environ.get("EMAIL_PASS")
     receivers = adminEmails
-    em = EmailMessage()
-    em['From']=sender
-    em['To']=receivers
-    em['Subject']='PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION'
-    em.set_content(e)
+    message = f"From: {sender}\nTo: "
+    for each in receivers:
+        message += each + ';'
+    message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
+    message += e
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
         smtp.login(sender, password)
-        smtp.sendmail(sender,receivers,em)
+        smtp.sendmail(sender,receivers,message)
