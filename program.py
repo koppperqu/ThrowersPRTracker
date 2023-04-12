@@ -1,26 +1,27 @@
 #EMAIL DOES NOT SEND IF ONLY ONE PERSON IS IN THE OTHEREMAILS LIST OR ADMINEMAILS LIST
-#MUST FIX LATER kinda 
-#Also gotta fix the paths for the files, us the os.home or something
+#MUST FIX LATER kinda
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+pathToAdd=""
+
 try:
-    f = open("adminEmails.txt", "r")
+    f = open(f"{pathToAdd}adminEmails.txt", "r")
 except IOError:
-    f = open("adminEmails.txt", 'w')
+    f = open(f"{pathToAdd}adminEmails.txt", 'w')
     f.close()
-    f = open("adminEmails.txt", "r")
+    f = open(f"{pathToAdd}adminEmails.txt", "r")
 
 adminEmails=f.read().split(',')
 adminEmails=[s.strip() for s in adminEmails]
 f.close()
 
 try:
-    f = open("otherEmails.txt", "r")
+    f = open(f"{pathToAdd}otherEmails.txt", "r")
 except IOError:
-    f = open("otherEmails.txt", 'w')
+    f = open(f"{pathToAdd}otherEmails.txt", 'w')
     f.close()
-    f = open("otherEmails.txt", "r")
+    f = open(f"{pathToAdd}otherEmails.txt", "r")
 
 otherEmails=f.read().split(',')
 otherEmails=[s.strip() for s in otherEmails]
@@ -64,7 +65,7 @@ from sqlalchemy import MetaData
 
 url_object = URL.create(
     "sqlite",
-    database="appdb",
+    database=f"{pathToAdd}appdb",
 )
 
 engine = create_engine(url_object)
@@ -499,7 +500,7 @@ try:
     #Hopefully this implmentation works when more than one meet is done on a day
     #And when more than one meet is done in a week
 
-    f = open("lastMeetProgramRanOn.txt", "r")
+    f = open(f"{pathToAdd}lastMeetProgramRanOn.txt", "r")
     mostRecentlyRanMeet=f.readline().strip()
     mostRecentlyRanMeetDate=f.readline().strip()
     f.close()
@@ -551,7 +552,7 @@ try:
                     mostRecentlyRanMeetDate = mostRecentMeetsByDate[meetIndex+1]['date']
                 else:
                     #Otherwise it is the most recently ran meet and is last in list to we save
-                    f = open("lastMeetProgramRanOn.txt", "w")
+                    f = open(f"{pathToAdd}lastMeetProgramRanOn.txt", "w")
                     f.writelines(eachMeet['meet'].text +"\n")
                     f.writelines(eachMeet['date'])
                     f.close()
