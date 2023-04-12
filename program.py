@@ -1,5 +1,3 @@
-#EMAIL DOES NOT SEND IF ONLY ONE PERSON IS IN THE OTHEREMAILS LIST OR ADMINEMAILS LIST
-#MUST FIX LATER kinda
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
@@ -487,19 +485,16 @@ def addToForInstagram(sortedPrs):
             textToReturn += f"{each['name']} - {each['mark']}\n"
     return(textToReturn)
 
+
 try:
     #MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE MAIN PROGRAM LOOP STARTS HERE 
-
     #First get and order most recent meets
-
     mostRecentMeetsByDate=getMostRecentMeetsAndOrderThem()
-
     #After getting most recent meets the following code will run the check for prs
     #While also getting throws numbers for prs then update the DB
     #This will happend for every meet that the program has not ran on yet
     #Hopefully this implmentation works when more than one meet is done on a day
     #And when more than one meet is done in a week
-
     f = open(f"{pathToAdd}lastMeetProgramRanOn.txt", "r")
     mostRecentlyRanMeet=f.readline().strip()
     mostRecentlyRanMeetDate=f.readline().strip()
@@ -536,13 +531,10 @@ try:
                     receivers = otherEmails
                     message = f"From: {sender}\nTo: "
                     for each in receivers:
-                        if receivers.index(each)==len(receivers)-1:
-                            message += each
-                            break
                         message += each + ','
                     
                     message += "\nSubject: Throws PRS This Week\n\n"
-                    message += message+'\n\n'+forEmail
+                    message += forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
@@ -562,9 +554,7 @@ try:
     #An email to see if anything was missed or if new people are added
     #This will update the DB after checking for prs from the most recent meet, if it finds stuff
     #Someone was probably missed, unless they were just added to the DB, (No previous history i.e. freshman or new event)
-
     getCurrentAthletesAndPRS()
-
     #The code to format the email sent to me
     #VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
     prAdded=""
@@ -578,11 +568,11 @@ try:
                 personAdded=personAdded+f"{each['name']} was added to the DB, probably their first meet, if not somethings wrong\n"
             if each['event']!=None:
                 eventAdded=eventAdded+f"{each['event']} was added to the DB, something is most likley drastically wrong CALL HELP\n"
-
+    
     if(newPRsOrPeopleAdded!=[]):
         newAddsToProgram = 'Below contains new people added and new prs if any\n\n'
         newAddsToProgram=newAddsToProgram+personAdded+prAdded+eventAdded
-
+    
     sorted_list = sorted(tfrrsPRs,key=lambda x:(x['event'],-x['mark']))
     if len(sorted_list)!=0:
         event=sorted_list[0]['event']
@@ -595,7 +585,6 @@ try:
             if event!=sorted_list[index+1]['event']:
                 instagram = instagram + (f"\n{sorted_list[index+1]['event']}\n")
                 event=sorted_list[index+1]['event']
-
     #If there is no new adds or changes to instagam dont send out an email
     if newAddsToProgram!='' or instagram!='':
         import ssl
@@ -606,9 +595,6 @@ try:
         receivers = adminEmails
         message = f"From: {sender}\nTo: "
         for each in receivers:
-            if receivers.index(each)==len(receivers)-1:
-                message += each
-                break
             message += each + ','
         
         message += "\nSubject: THROWS PROGRAM DEBUG STUFF\n\n"
@@ -617,7 +603,8 @@ try:
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
             smtp.login(sender, password)
             smtp.sendmail(sender,receivers,message)
-except Exception as e:
+except Exception:
+    import traceback
     import ssl
     import smtplib
     import os
@@ -626,13 +613,10 @@ except Exception as e:
     receivers = adminEmails
     message = f"From: {sender}\nTo: "
     for each in receivers:
-        if receivers.index(each)==len(receivers)-1:
-            message += each
-            break
         message += each + ','
     
     message += "\nSubject: PROGRAM HAS THROWN AN EXCEPTION NEEDS ATTENTION\n\n"
-    message += str(e)
+    message += traceback.format_exc()
     context = ssl.create_default_context()
     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
         smtp.login(sender, password)
