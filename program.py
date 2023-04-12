@@ -528,7 +528,7 @@ try:
                     sender = os.environ.get("PYTHON_EMAIL")
                     password=os.environ.get("EMAIL_PASS")
                     receivers = otherEmails
-                    message = f"{message}\n\nFrom: {sender}\nTo: "
+                    message = f"From: {sender}\nTo: "
                     for each in receivers:
                         if receivers.index(each)==len(receivers)-1:
                             message += each
@@ -536,7 +536,7 @@ try:
                         message += each + ','
                     
                     message += "Subject: Throws PRS This Week\n\n"
-                    message += forEmail
+                    message += message+'\n\n'+forEmail
                     context = ssl.create_default_context()
                     with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=context) as smtp:
                         smtp.login(sender, password)
