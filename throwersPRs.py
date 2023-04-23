@@ -71,7 +71,7 @@ def getThrowersInDBCurrPRS():
                     count = res.fetchone()[0]
                     if(count==1):
                         currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event)).fetchone()[0]
-                        if(currPR<float(formatMark)):
+                        if(float(currPR)<float(formatMark)):
                             print('Updating ' + eachThrower + ' event ' + event + ' new mark ' + formatMark)
                             prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachThrower,event)).fetchone()[0]
                             cur.execute("update prs set mark = ? where id = ?",(formatMark,prID,))
@@ -149,7 +149,8 @@ def checkForPRS(eventURLS):
                     #Need to remove 'FOUL' for the max function to work
                     athleteID = cur.execute("select id from athletes where name = ?",(eachName,)).fetchone()[0]
                     eventID = cur.execute("select id from events where name = ?",(eachEventURL[0],)).fetchone()[0]
-                    markNoFoul = [mark.replace('FOUL', '0') for mark in marks[index]]
+                    markNoPASS = [mark.replace('PASS', '0') for mark in marks[index]]
+                    markNoFoul = [mark.replace('FOUL', '0') for mark in markNoPASS]
                     highestThrowAtMeet=max(markNoFoul)
                     throwNumber = markNoFoul.index(highestThrowAtMeet)+1
                     res = cur.execute("select count(*) from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0]))
@@ -160,7 +161,7 @@ def checkForPRS(eventURLS):
                     else:
                         currPR = cur.execute("select prs.mark from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
                         prID = cur.execute("select prs.id from prs inner join athletes on prs.athleteID = athletes.id inner join events on events.id = prs.eventID where athletes.name = ? and events.name = ?",(eachName,eachEventURL[0])).fetchone()[0]
-                        if(currPR<float(highestThrowAtMeet)):
+                        if(float(currPR)<float(highestThrowAtMeet)):
                             cur.execute("update prs set mark = ? where id = ?",(highestThrowAtMeet,prID,))
                             con.commit()
                             instagram +=eachName + ' - '+ highestThrowAtMeet+'\n'
