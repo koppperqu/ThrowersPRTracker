@@ -461,28 +461,30 @@ def addToForMatt(sortedPrs):
     currEvent=sortedPrs[0]['event']
     textToReturn = currEvent +"\n\n"
     for each in sortedPrs:
+        formattedMark="%.2f" % float(each['mark'])
         if each['event']==currEvent:
             #just add mark/number
-            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {each['mark']}\n"
+            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {formattedMark}\n"
         else:
             currEvent=each['event']
             #add new event and mark/number
             textToReturn += "\n" +currEvent +"\n\n"
-            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {each['mark']}\n"
+            textToReturn += f"{each['name']} - throw number {each['thrownumber']} - mark was {formattedMark}\n"
     return(textToReturn)
 
 def addToForInstagram(sortedPrs):
     currEvent=sortedPrs[0]['event']
     textToReturn = currEvent +"\n"
     for each in sortedPrs:
+        formattedMark="%.2f" % float(each['mark'])
         if each['event']==currEvent:
             #just add mark/number
-            textToReturn += f"{each['name']} - {each['mark']}\n"
+            textToReturn += f"{each['name']} - {formattedMark}\n"
         else:
             currEvent=each['event']
             #add new event and mark/number
             textToReturn += "\n" +currEvent +"\n"
-            textToReturn += f"{each['name']} - {each['mark']}\n"
+            textToReturn += f"{each['name']} - {formattedMark}\n"
     return(textToReturn)
 
 
@@ -517,10 +519,13 @@ try:
                     if len(sortedMensPrs)!=0:
                         forEmail += "MEN\n\n"
                         forEmail += addToForMatt(sortedMensPrs)
+                    if len(sortedWomensPrs)!=0:
                         forEmail += "\nWOMEN\n\n"
                         forEmail += addToForMatt(sortedWomensPrs)
+                    if len(sortedMensPrs)!=0:
                         forEmail += "\n\nINSTAGRAM \n\nMen\n\n"
                         forEmail += addToForInstagram(sortedMensPrs)
+                    if len(sortedWomensPrs)!=0:
                         forEmail += "\nWomen\n\n"
                         forEmail += addToForInstagram(sortedWomensPrs)
                     import ssl
